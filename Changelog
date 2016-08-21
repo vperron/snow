@@ -1,0 +1,7 @@
+2013-01-18 Version 0.2.1
+
+	* JSON as default output format towards cassandra
+	* Unique milliseconds timestamps, with TZ information
+	* MSGPACK also implemented and supported
+	* Efficient sniffing (no data packets, no AP packets)
+	* Sends towards a zeromq PULL endpoint

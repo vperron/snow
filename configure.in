@@ -1,0 +1,197 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+AC_PREREQ(2.61)
+#
+# Change the version number below after doing a public release.
+# The version in git should reflect the *next* version planned.
+# Version must be MAJOR.MINOR.PATCH otherwise things will break.
+#
+AC_INIT([snow],[1.0.0],[])
+
+AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_MACRO_DIR(config)
+AM_CONFIG_HEADER(src/platform.h)
+AM_INIT_AUTOMAKE(tar-ustar)
+
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_CC_C99
+AM_PROG_CC_C_O
+AC_PROG_LIBTOOL
+
+CFLAGS="${CFLAGS}"
+
+# debug 
+AC_ARG_ENABLE([debug],
+              [AS_HELP_STRING([--enable-debug], [enables debug output [default=no]])],
+              [],
+              [enable_debug=yes])
+AM_CONDITIONAL(DEBUG_ENABLED, test "x$enable_debug" = "xyes")
+if test "x$enable_debug" = "xyes"; then
+  AC_DEFINE(SNOW_HAVE_DEBUG, 1, [Have debug support])
+fi
+
+# libuci 
+AC_ARG_WITH([libuci],
+            [AS_HELP_STRING([--with-libuci],
+						[Specify libuci prefix])],
+            [lsd_search_libuci="yes"],
+            [])
+if test "x$lsd_search_libuci" = "xyes"; then
+    if test -r "${with_libuci}/include/uci.h"; then
+        CFLAGS="-I${with_libuci}/include ${CFLAGS}"
+        LDFLAGS="-L${with_libuci}/lib ${LDFLAGS}"
+    else
+        AC_MSG_ERROR([${with_libuci}/include/uci.h not found. Please check libuci prefix])
+    fi
+fi
+
+# libczmq 
+AC_ARG_WITH([libczmq],
+            [AS_HELP_STRING([--with-libczmq],
+						[Specify libczmq prefix])],
+            [lsd_search_libczmq="yes"],
+            [])
+if test "x$lsd_search_libczmq" = "xyes"; then
+    if test -r "${with_libczmq}/include/czmq.h"; then
+        CFLAGS="-I${with_libczmq}/include ${CFLAGS}"
+        LDFLAGS="-L${with_libczmq}/lib ${LDFLAGS}"
+    else
+        AC_MSG_ERROR([${with_libczmq}/include/czmq.h not found. Please check libczmq prefix])
+    fi
+fi
+
+# libpcap 
+AC_ARG_WITH([libpcap],
+            [AS_HELP_STRING([--with-libpcap],
+						[Specify libpcap prefix])],
+            [lsd_search_libpcap="yes"],
+            [])
+if test "x$lsd_search_libpcap" = "xyes"; then
+    if test -r "${with_libpcap}/include/pcap.h"; then
+        CFLAGS="-I${with_libpcap}/include ${CFLAGS}"
+        LDFLAGS="-L${with_libpcap}/lib ${LDFLAGS}"
+    else
+        AC_MSG_ERROR([${with_libpcap}/include/pcap.h not found. Please check libpcap prefix])
+    fi
+fi
+
+
+# Host specific checks
+AC_CANONICAL_HOST
+
+# Determine whether or not documentation should be built and installed.
+
+
+# Set some default features required by libzre code.
+CFLAGS="-D_REENTRANT -D_THREAD_SAFE $CFLAGS"
+
+# OS-specific tests
+case "${host_os}" in
+    *linux*)
+        # Define on Linux to enable all library features
+        CFLAGS="-D_GNU_SOURCE -DLINUX $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_LINUX, 1, [Have Linux OS])
+        ;;
+    *solaris*)
+        # Define on Solaris to enable all library features
+        CFLAGS="-D_PTHREADS $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_SOLARIS, 1, [Have Solaris OS])
+        ;;
+    *freebsd*)
+        # Define on FreeBSD to enable all library features
+        CFLAGS="-D__BSD_VISIBLE $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_FREEBSD, 1, [Have FreeBSD OS])
+        ;;
+    *darwin*)
+        # Define on Darwin to enable all library features
+        CFLAGS="-D_DARWIN_C_SOURCE $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_OSX, 1, [Have DarwinOSX OS])
+        ;;
+    *netbsd*)
+        # Define on NetBSD to enable all library features
+        CFLAGS="-D_NETBSD_SOURCE $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_NETBSD, 1, [Have NetBSD OS])
+        ;;
+    *openbsd*)
+        # Define on OpenBSD to enable all library features
+        CFLAGS="-D_BSD_SOURCE $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_OPENBSD, 1, [Have OpenBSD OS])
+        ;;
+    *nto-qnx*)
+        AC_DEFINE(SNOW_HAVE_QNXNTO, 1, [Have QNX Neutrino OS])
+        ;;
+    *aix*)
+        AC_DEFINE(SNOW_HAVE_AIX, 1, [Have AIX OS])
+        ;;
+    *hpux*)
+        # Define on HP-UX to enable all library features
+        CFLAGS="-D_POSIX_C_SOURCE=200112L"
+        AC_DEFINE(SNOW_HAVE_HPUX, 1, [Have HPUX OS])
+        ;;
+    *mingw32*)
+        AC_DEFINE(SNOW_HAVE_WINDOWS, 1, [Have Windows OS])
+        AC_DEFINE(SNOW_HAVE_MINGW32, 1, [Have MinGW32])
+        AC_CHECK_HEADERS(windows.h)
+        lsd_on_mingw32="yes"
+        lsd_install_man="no"
+        ;;
+    *cygwin*)
+        # Define on Cygwin to enable all library features
+        CFLAGS="-D_GNU_SOURCE $CFLAGS"
+        AC_DEFINE(SNOW_HAVE_CYGWIN, 1, [Have Cygwin])
+        ;;
+    *)
+        AC_MSG_ERROR([unsupported system: ${host_os}.])
+        ;;
+esac
+
+AM_CONDITIONAL(HOST_ANDROID, test "x$liblsd_host_android" = "xyes")
+
+AC_CHECK_LIB(m, floor)
+
+AC_CHECK_LIB(uci, uci_lookup_ptr, [LIBS="-luci $LIBS"],
+															 [AC_MSG_ERROR([cannot link with -luci, install libuci.])]
+															 )
+
+AC_CHECK_LIB(czmq, zctx_new, [LIBS="-lczmq $LIBS"],
+															 [AC_MSG_ERROR([cannot link with -lczmq, install libczmq.])]
+															 )
+
+AC_CHECK_LIB(pcap, pcap_open_live, [LIBS="-lpcap $LIBS"],
+															 [AC_MSG_ERROR([cannot link with -lpcap, install libpcap.])]
+															 )
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_HEADER_STDBOOL
+AC_C_CONST
+AC_C_INLINE
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_HEADER_TIME
+AC_TYPE_UINT32_T
+AC_C_VOLATILE
+
+AC_CHECK_HEADERS(math.h errno.h arpa/inet.h netinet/tcp.h netinet/in.h stddef.h \
+stdlib.h string.h sys/socket.h sys/time.h unistd.h limits.h)
+AC_CHECK_HEADERS([net/if.h net/if_media.h linux/wireless.h], [], [],
+[
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+])
+
+# These options are GNU compiler specific.
+if test "x$GCC" = "xyes"; then
+    CFLAGS="-fPIC ${CFLAGS}"
+		LDFLAGS="-fPIC ${LDFLAGS}"
+fi
+AC_SUBST(CFLAGS)
+AC_SUBST(LDFLAGS)
+
+# Checks for library functions.
+AC_TYPE_SIGNAL
+
+AC_OUTPUT(Makefile src/Makefile)

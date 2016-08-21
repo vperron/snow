@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+
+START=80
+APP=snow
+OPTS='-i mon0'
+PID_FILE=/var/run/$APP.pid
+
+start() {
+  ifconfig mon0 > /dev/null
+  STATUS=$?
+  if [ $STATUS -ne 0 ]; then
+    iw phy phy0 interface add mon0 type monitor
+    ifconfig mon0 up
+    ifconfig mon0 10.0.0.1 netmask 255.255.255.0
+  fi
+  start-stop-daemon -S -x $APP -p $PID_FILE -m -b -- $OPTS
+}
+
+stop() {
+  start-stop-daemon -K -n $APP -p $PID_FILE -s TERM
+  rm -rf $PID_FILE
+}
